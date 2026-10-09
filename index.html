@@ -257,7 +257,7 @@ function calc(){
     sum.ein+=ein;sum.bk+=bk;sum.rate+=N.za[y]||0;sum.mb+=mb;sum.mn+=mn;sum.tax+=tN;
   }
   let nach=0; for(let y=L+1;y<=20;y++) nach+=(EIN[y]-BK[y])*f;
-  return {T,Z,L,n,P,fee,ekGes,iab,sonder,A,N,rIab,rSon,rows,sum,nach,j7:(EIN[L+1]-BK[L+1])*f,zA,zN,k,iabT,cap:iabT>Z,lim:T*0.5>iabMax,nI};
+  return {T,Z,L,n,P,fee,ekGes,iab,sonder,A,N,rIab,rSon,rows,sum,nach,j7:(EIN[L+1]-BK[L+1])*f,zA,zN,k,iabT,cap:iabT>Z,capS:sonder>Z,lim:T*0.5>iabMax,nI};
 }
 function render(){
   const c=calc();
@@ -274,8 +274,8 @@ function render(){
   $('kEinS').textContent='nach Betriebskosten, im Schnitt. Rate neu: '+eur(c.N.rate)+', Differenz '+sgn(einM-c.N.rate)+' vor Steuer';
   $('kNach').textContent=eur(c.nach);
   $('kNachS').textContent='schuldenfreie Anlage, Jahr '+(c.L+1)+' bis 20, vor Steuer. Im Jahr '+(c.L+1)+': '+eur(c.j7)+' ('+eur(c.j7/12)+' pro Monat)';
-  $('cap').hidden=!(c.cap||c.lim);
-  $('cap').textContent=(c.lim?'Der IAB ist auf '+eur(c.iab)+' begrenzt ('+c.nI+' × 200.000 € Höchstbetrag), das sind weniger als 50 % der Investition. Der Rest wird über Sonder-AfA und laufende Abschreibung berücksichtigt. ':'')+(!c.cap?'':'Der IAB-Anteil pro Jahr ('+eur(c.iabT)+') ist höher als das zu versteuernde Einkommen. Der Abzug wirkt in dieser Rechnung nur bis auf null; ein möglicher Verlustrücktrag ist nicht eingerechnet.');
+  $('cap').hidden=!(c.cap||c.lim||c.capS);
+  $('cap').textContent=(c.lim?'Der IAB ist auf '+eur(c.iab)+' begrenzt ('+c.nI+' × 200.000 € Höchstbetrag), das sind weniger als 50 % der Investition. Der Rest wird über Sonder-AfA und laufende Abschreibung berücksichtigt. ':'')+(!c.cap?'':'Der IAB-Anteil pro Jahr ('+eur(c.iabT)+') ist höher als das zu versteuernde Einkommen. Der Abzug wirkt in dieser Rechnung nur bis auf null; ein möglicher Verlustrücktrag ist nicht eingerechnet.')+(c.capS?' Die Sonder-AfA ('+eur(c.sonder)+') ist höher als das zu versteuernde Einkommen. Mehr als die gesamte Steuer eines Jahres kann sie in dieser Rechnung nicht sparen, deshalb steigt der Steuervorteil bei größerem Ticket hier nicht weiter. Verlustrück- und -vorträge sind nicht eingerechnet.':'');
   $('say').textContent= c.sum.mn>0
     ? 'Der höhere Zins kostet Sie netto rund '+eur(mnM)+' im Monat, über '+c.L+' Jahre zusammen '+eur(c.sum.mn)+'. Dem steht ein Steuerrückfluss von '+eur(rueck)+' gegenüber, also etwa das '+(rueck/c.sum.mn).toLocaleString('de-DE',{maximumFractionDigits:0})+'-Fache. Nach Kreditende gehört Ihnen eine schuldenfreie Anlage mit erwarteten Überschüssen von '+eur(c.nach)+'.'
     : 'Beim neuen Zins entsteht keine Mehrbelastung gegenüber dem bisherigen Zins.';
