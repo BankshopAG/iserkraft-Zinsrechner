@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Speicher-Zinsrechner</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: links feste Stellgrößen, rechts Ergebnis von oben nach unten: Mehrbelastung -> Gegenwerte -> Bilanz -> Jahre */
+:root{
+  --bg:#f3f5f7; --panel:#ffffff; --ink:#14212b; --muted:#5b6b78; --line:#d9e0e6;
+  --brand:#0b4a5e; --brand-ink:#ffffff; --plus:#157a4d; --minus:#b3401f; --soft:#e7eef2; --amber:#c98a12;
+  --font:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0f171d; --panel:#17222a; --ink:#e8eef2; --muted:#93a4b0; --line:#2a3944;
+  --brand:#2b8aa6; --brand-ink:#ffffff; --plus:#4cc38a; --minus:#f08a66; --soft:#1e2c36; --amber:#e3ab3c; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0f171d; --panel:#17222a; --ink:#e8eef2; --muted:#93a4b0; --line:#2a3944;
+  --brand:#2b8aa6; --brand-ink:#ffffff; --plus:#4cc38a; --minus:#f08a66; --soft:#1e2c36; --amber:#e3ab3c; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.45;padding-inline:16px;padding-block:20px 40px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px;border-bottom:2px solid var(--brand);padding-bottom:12px}
+.firm b{display:block;font-size:17px;font-weight:700;letter-spacing:.01em}
+.firm span{font-size:12.5px;color:var(--muted)}
+h1{font-size:clamp(20px,3vw,27px);margin:0;font-weight:600;text-wrap:balance}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px;font-weight:600}
+.grid{display:grid;grid-template-columns:330px minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px}
+.inputs{display:flex;flex-direction:column;gap:14px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 100px)}
+@media (max-width:860px){.inputs{position:static}}
+.f{display:flex;flex-direction:column;gap:5px}
+.f label{font-size:13px;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+.f label output{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--brand)}
+input[type=number],select{width:100%;font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink)}
+input:focus-visible,select:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.res{display:flex;flex-direction:column;gap:18px;min-width:0}
+.hero{background:var(--brand);color:var(--brand-ink);border-radius:6px;padding:12px 18px;display:flex;flex-wrap:wrap;gap:8px 32px;align-items:flex-end;position:sticky;top:calc(env(safe-area-inset-top,0px) + 8px);z-index:5;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.hero em{font-size:14px!important}
+.pic{margin:0;position:relative;border-radius:6px;overflow:hidden;background:#082a3a}
+.pic svg{display:block;width:100%;height:clamp(190px,28vw,330px)}
+.pic figcaption{position:absolute;left:0;bottom:0;top:0;display:flex;flex-direction:column;justify-content:center;gap:8px;padding:18px clamp(16px,4vw,40px);max-width:min(100%,520px);color:#ffffff}
+.pic figcaption b{font-size:clamp(19px,2.9vw,32px);line-height:1.15;font-weight:700;text-wrap:balance}
+.pic figcaption span{font-size:clamp(13px,1.4vw,16px);color:#d6e6ec}
+@keyframes rot{to{transform:rotate(360deg)}}
+@keyframes flow{to{stroke-dashoffset:-32}}
+@keyframes led{50%{opacity:.35}}
+.pic .rot{animation:rot 9s linear infinite}.pic .r2{animation-duration:12s}
+.pic .flow{animation:flow 1.6s linear infinite}.pic .led{animation:led 2.4s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.pic .rot,.pic .flow,.pic .led{animation:none}}
+.legal{border-left:3px solid var(--amber);font-size:13px;display:flex;flex-direction:column;gap:8px}
+.legal p{margin:0;max-width:95ch;color:var(--muted)}.legal p b{color:var(--ink)}.legal h2{margin:0}
+.hero .gain:first-of-type{margin-left:auto}
+@media (max-width:520px){.hero strong{font-size:19px!important}.hero .gain:first-of-type{margin-left:0}}
+.hero small{display:block;font-size:12.5px;opacity:.85}
+.hero strong{display:block;font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.2}
+.hero em{font-style:normal;font-size:12.5px;opacity:.85}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.kpi{border-left:3px solid var(--plus);padding:2px 0 2px 12px}
+.kpi small{display:block;color:var(--muted);font-size:12.5px}
+.kpi strong{font-size:21px;font-variant-numeric:tabular-nums;color:var(--plus)}
+.kpi p{margin:2px 0 0;font-size:12.5px;color:var(--muted)}
+.bars{display:flex;flex-direction:column;gap:9px}
+.bar{display:grid;grid-template-columns:minmax(0,210px) minmax(0,1fr) auto;gap:10px;align-items:center;font-size:13.5px}
+.bar i{display:block;height:14px;border-radius:2px;min-width:2px}
+.bar b{font-variant-numeric:tabular-nums;font-weight:600}
+@media (max-width:520px){.bar{grid-template-columns:minmax(0,1fr) auto}.bar .track{grid-column:1/-1;order:3}}
+.say{background:var(--soft);border-radius:6px;padding:14px 16px;font-size:15.5px;max-width:75ch}
+.led{display:flex;flex-direction:column}
+.led div{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.led div.sum{border-bottom:0;border-top:2px solid var(--ink);font-weight:700;margin-top:-1px}
+.pos{color:var(--plus)}.neg{color:var(--minus)}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums}
+th,td{text-align:right;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-weight:600;color:var(--muted);font-size:12px}
+th:first-child,td:first-child{text-align:left}
+tfoot td{font-weight:700;border-top:2px solid var(--ink);border-bottom:0}
+.note{font-size:12px;color:var(--muted);max-width:90ch}
+.warn{color:var(--amber);font-size:12.5px}
+</style>
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<div class="wrap">
+<header>
+  <div class="firm"><b>CEB Bankshop AG</b><span>Vermittlung von Bankdienstleistungen</span></div>
+  <h1>Batteriespeicher: Was kostet die Zinsänderung wirklich?</h1>
+</header>
+
+<figure class="pic">
+<svg viewBox="0 0 1200 380" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Batteriespeicher-Anlage mit Netzanschluss in der Abenddämmerung">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#082a3a"/><stop offset=".55" stop-color="#0f5a73"/><stop offset=".85" stop-color="#e79a3c"/><stop offset="1" stop-color="#f6c66a"/></linearGradient>
+    <radialGradient id="sun" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff3c4"/><stop offset=".35" stop-color="#ffd978" stop-opacity=".9"/><stop offset="1" stop-color="#ffd978" stop-opacity="0"/></radialGradient>
+    <linearGradient id="box" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4f7f8"/><stop offset="1" stop-color="#b9c8cf"/></linearGradient>
+    <linearGradient id="side" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8ea2ac"/><stop offset="1" stop-color="#6d838e"/></linearGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#051c27" stop-opacity=".88"/><stop offset=".5" stop-color="#051c27" stop-opacity=".35"/><stop offset=".75" stop-color="#051c27" stop-opacity="0"/></linearGradient>
+    <g id="unit">
+      <polygon points="0,0 150,0 172,-14 22,-14" fill="#dfe7ea"/>
+      <polygon points="150,0 172,-14 172,62 150,78" fill="url(#side)"/>
+      <rect x="0" y="0" width="150" height="78" fill="url(#box)"/>
+      <g fill="#93a8b2"><rect x="10" y="10" width="38" height="58"/><rect x="56" y="10" width="38" height="58"/><rect x="102" y="10" width="38" height="58"/></g>
+      <g stroke="#c9d6db" stroke-width="2"><path d="M10 20h38M10 30h38M10 40h38M10 50h38M10 60h38M56 20h38M56 30h38M56 40h38M56 50h38M56 60h38M102 20h38M102 30h38M102 40h38M102 50h38M102 60h38"/></g>
+      <rect x="64" y="-2" width="22" height="5" rx="2" fill="#3fe08f" class="led"/>
+      <rect x="-4" y="78" width="180" height="6" fill="#33454e"/>
+    </g>
+  </defs>
+  <rect width="1200" height="380" fill="url(#sky)"/>
+  <circle cx="880" cy="296" r="170" fill="url(#sun)"/>
+  <path d="M0 300 Q200 262 420 288 T820 282 T1200 270 V380 H0Z" fill="#0c3a4a"/>
+  <path d="M0 322 Q260 296 560 314 T1200 300 V380 H0Z" fill="#082733"/>
+  <!-- Windräder -->
+  <g stroke="#dfeaee" stroke-width="3" stroke-linecap="round" fill="none" opacity=".85">
+    <path d="M1040 300V190"/><g class="rot" style="transform-origin:1040px 190px"><path d="M1040 190v-46M1040 190l40 23M1040 190l-40 23"/></g>
+    <path d="M1120 296V214" stroke-width="2"/><g class="rot r2" style="transform-origin:1120px 214px" stroke-width="2"><path d="M1120 214v-34M1120 214l29 17M1120 214l-29 17"/></g>
+  </g>
+  <!-- Strommast und Leitung -->
+  <g stroke="#0a2029" stroke-width="3" fill="none" stroke-linejoin="round">
+    <path d="M700 318L718 150L736 318M706 262h24M710 214h16M690 190h56M698 168h40M700 318l30-56M736 318l-30-56M706 262l20-48M730 262l-20-48"/>
+    <path d="M690 190Q880 250 1200 200M746 190Q940 262 1200 226M698 168Q560 230 470 262" stroke-width="1.5"/>
+  </g>
+  <!-- Speicher -->
+  <rect x="0" y="336" width="1200" height="44" fill="#06202a"/>
+  <use href="#unit" x="250" y="258"/><use href="#unit" x="440" y="258"/><use href="#unit" x="630" y="258"/><use href="#unit" x="820" y="258"/>
+  <g fill="none" stroke="#3fe08f" stroke-width="2.5" stroke-dasharray="6 10" class="flow"><path d="M325 344h570"/></g>
+  <rect width="1200" height="380" fill="url(#fade)"/>
+</svg>
+<figcaption><b>Ihr Speicher verdient Geld, wenn andere Strom brauchen.</b><span>Sachwert mit laufenden Einnahmen und Steuervorteil. Rechnen Sie Ihr Ticket hier durch.</span></figcaption>
+</figure>
+
+<section class="hero" aria-label="Mehrbelastung aus dem Netto">
+  <div><small>Mehrbelastung aus dem Netto, pro Monat</small><strong id="hNm"></strong></div>
+  <div class="gain"><small>Steuervorteil (IAB + Sonder-AfA)</small><strong id="hTax"></strong></div>
+  <div class="gain"><small>Erwartete Einnahmen über 20 Jahre*</small><strong id="hKap"></strong></div>
+</section>
+
+<div class="grid">
+  <section class="panel inputs" aria-label="Eingaben">
+    <h2>Eingaben</h2>
+    <div class="f"><label for="ticket">Ticketgröße (Investition) <output id="oTicket"></output></label>
+      <input type="range" id="ticket" min="50000" max="400000" step="5000" value="400000"></div>
+    <div class="f"><label for="zve">Zu versteuerndes Jahreseinkommen <output id="oZve"></output></label>
+      <input type="range" id="zve" min="40000" max="600000" step="5000" value="250000"></div>
+    <div class="f"><label for="veranl">Veranlagung</label>
+      <select id="veranl"><option value="1">Einzelveranlagung</option><option value="2">Zusammenveranlagung (Splitting)</option></select></div>
+    <div class="f"><label for="iabJ">IAB gebildet in den Jahren</label>
+      <select id="iabJ"><option value="4">2023 bis 2026 (je ein Viertel)</option><option value="3">2024 bis 2026 (je ein Drittel)</option><option value="2">2025 und 2026 (je die Hälfte)</option><option value="1">nur 2026</option></select></div>
+    <div class="two">
+      <div class="f"><label for="zAlt">Zins bisher % p.a.</label><input type="number" id="zAlt" value="5.40" step="0.01" min="0" max="15"></div>
+      <div class="f"><label for="zNeu">Zins neu % p.a.</label><input type="number" id="zNeu" value="6.29" step="0.01" min="0" max="15"></div>
+    </div>
+    <div class="two">
+      <div class="f"><label for="ek">Eigenkapital %</label><input type="number" id="ek" value="20" step="1" min="0" max="100"></div>
+      <div class="f"><label for="lz">Laufzeit Jahre</label><input type="number" id="lz" value="6" step="1" min="3" max="10"></div>
+    </div>
+    <div class="f"><label for="soli"><span><input type="checkbox" id="soli" checked> Solidaritätszuschlag einrechnen</span></label></div>
+    <p class="note" id="finfo"></p>
+  </section>
+
+  <div class="res">
+    <p class="say" id="say"></p>
+
+    <section class="panel">
+      <h2>Was dem gegenübersteht</h2>
+      <div class="kpis">
+        <div class="kpi"><small>Steuerrückfluss aus IAB und Sonder-AfA</small><strong id="kTax"></strong><p id="kTaxS"></p></div>
+        <div class="kpi"><small>Einnahmen pro Monat während der Finanzierung</small><strong id="kEin"></strong><p id="kEinS"></p></div>
+        <div class="kpi"><small>Überschüsse nach Kreditende</small><strong id="kNach"></strong><p id="kNachS"></p></div>
+      </div>
+      <p class="warn" id="cap" hidden></p>
+    </section>
+
+    <section class="panel">
+      <h2>Größenvergleich</h2>
+      <div class="bars" id="bars"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Bilanz bis Kreditende beim neuen Zins</h2>
+      <div class="led" id="led"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Jahr für Jahr</h2>
+      <div class="scroll"><table id="tab"></table></div>
+    </section>
+
+    <section class="panel legal">
+      <h2>Wichtiger Hinweis</h2>
+      <p><b>Alle Angaben sind unverbindliche, beispielhafte Modellrechnungen.</b> Sie dienen ausschließlich der Veranschaulichung und stellen weder ein Angebot noch eine Zusage, Garantie oder Zusicherung bestimmter Erträge, Steuervorteile oder Finanzierungskonditionen dar.</p>
+      <p>* Die erwarteten Einnahmen sind Prognosen nach Betriebskosten, vor Steuern und vor Kreditraten. Sie hängen unter anderem von Strompreisen, Vermarktung, Verfügbarkeit und Alterung der Anlage ab. Tatsächliche Ergebnisse können deutlich niedriger ausfallen, bis hin zum Verlust des eingesetzten Kapitals.</p>
+      <p>Die steuerliche Wirkung (IAB, Sonder-AfA, Abzug der Zinsen) hängt von Ihren persönlichen Verhältnissen und der Anerkennung durch das Finanzamt ab und kann sich durch Gesetzesänderungen ändern. Diese Berechnung ersetzt keine Steuer-, Rechts- oder Anlageberatung. Bitte lassen Sie Ihre Situation vor einer Entscheidung von Ihrem Steuerberater prüfen.</p>
+      <p>Zinssätze und Raten sind freibleibende Beispielwerte. Maßgeblich sind allein die Vertragsunterlagen und das verbindliche Angebot des Finanzierungspartners nach Bonitätsprüfung. Für die Richtigkeit, Vollständigkeit und Aktualität der Berechnung wird keine Haftung übernommen.</p>
+    </section>
+
+    <p class="note">Modellrechnung auf Basis der Projektkalkulation (Stand-Alone-Speicher, Basisszenario, Einspeisung ab 01.12.2026, Tilgungsbeginn 01.12.2026). Einnahmen, Betriebskosten und Abschreibungen werden linear auf die Ticketgröße umgerechnet. IAB 50 % der Investition, gleichmäßig auf die gewählten Bildungsjahre verteilt und vereinfachend für alle Jahre mit dem Tarif 2026 gerechnet, Sonder-AfA 40 % des Restbuchwerts, Strukturierungsgebühr 1 % des Darlehens aus Eigenmitteln. Einkommensteuer nach Tarif 2026 ohne Kirchensteuer; das eingegebene Einkommen wird für alle Jahre als gleichbleibend unterstellt, Verlustrück- und -vorträge sind nicht berücksichtigt. Erträge sind Prognosen und nicht garantiert. Keine Steuerberatung, kein verbindliches Finanzierungsangebot.</p>
+  </div>
+</div>
+</div>
+
+<script>
+// Basis: Projektkalkulation bei 214.200 € Ticket, Jahr 0 = Dezember 2026
+const BASE=214200;
+const EIN=[3576,42109,41898,41689,41481,41273,33521,30437,28902,29321,26326,26277,25165,24607,23347,23200,23163,22966,22966,22966,22966];
+const BK=[398,4738,4789,4841,4894,4948,5003,5059,5117,5175,5235,5296,5358,5422,5486,5552,5619,5688,5758,5830,5902];
+const AFA=[0,16322,13874,11793,9546,9546,841,841,841,841,841,0,0,0,0,0,0,0,0,0,0];
+const $=id=>document.getElementById(id);
+const eur=(v,d=0)=>v.toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d})+' €';
+const sgn=v=>(v>=0?'+':'−')+eur(Math.abs(v));
+
+function estGrund(x){ // Tarif 2026
+  x=Math.floor(Math.max(0,x));
+  if(x<=12348) return 0;
+  if(x<=17799){const y=(x-12348)/10000; return (914.51*y+1400)*y;}
+  if(x<=69878){const z=(x-17799)/10000; return (173.10*z+2397)*z+1034.87;}
+  if(x<=277825) return 0.42*x-11135.63;
+  return 0.45*x-19470.38;
+}
+function steuer(x,split,soli){
+  const e=Math.floor(split*estGrund(x/split));
+  const s=soli?Math.max(0,Math.min(0.055*e,0.119*(e-20350*split))):0;
+  return e+s;
+}
+function plan(P,zins,n){ // monatliche Annuität, Monat 0 = Jahr 0, danach je 12 Monate
+  const r=zins/1200, rate=r>0?P*r/(1-Math.pow(1+r,-n)):P/n;
+  const zi=[],za=[]; let rest=P;
+  for(let m=0;m<n;m++){const y=m===0?0:Math.floor((m-1)/12)+1; const z=rest*r; rest-=rate-z;
+    zi[y]=(zi[y]||0)+z; za[y]=(za[y]||0)+rate;}
+  return {rate,zi,za,total:rate*n};
+}
+function calc(){
+  const T=+$('ticket').value, Z=+$('zve').value, sp=+$('veranl').value, so=$('soli').checked;
+  const ek=Math.min(100,Math.max(0,+$('ek').value||0))/100, L=Math.min(10,Math.max(3,Math.round(+$('lz').value||6))), n=L*12;
+  const zA=Math.max(0,+$('zAlt').value||0), zN=Math.max(0,+$('zNeu').value||0);
+  const f=T/BASE, P=T*(1-ek), fee=P*0.01, ekGes=T*ek+fee;
+  const iab=T*0.5, sonder=(T+fee-iab)*0.4;
+  const A=plan(P,zA,n), N=plan(P,zN,n);
+  const t0=steuer(Z,sp,so);
+  const k=+$('iabJ').value, iabT=iab/k;
+  const rIab=k*(t0-steuer(Z-iabT,sp,so)), rSon=t0-steuer(Z-sonder,sp,so);
+  const vor=(k-1)*(steuer(Z-iabT,sp,so)-t0);
+  const rows=[]; let sum={ein:0,bk:0,rate:0,mb:0,mn:0,tax:0};
+  for(let y=0;y<=L;y++){
+    const ein=EIN[y]*f, bk=BK[y]*f, sd=y===0?iabT:(y===1?sonder:0);
+    const tax=s=>steuer(Z+ein-bk-(s.zi[y]||0)-AFA[y]*f-sd,sp,so)-t0+(y===0?vor:0);
+    const tA=tax(A), tN=tax(N);
+    const mb=(N.za[y]||0)-(A.za[y]||0), mn=mb-(tA-tN);
+    rows.push({y,ein,bk,rate:N.za[y]||0,mb,mn,tax:tN});
+    sum.ein+=ein;sum.bk+=bk;sum.rate+=N.za[y]||0;sum.mb+=mb;sum.mn+=mn;sum.tax+=tN;
+  }
+  let nach=0; for(let y=L+1;y<=20;y++) nach+=(EIN[y]-BK[y])*f;
+  return {T,Z,L,n,P,fee,ekGes,iab,sonder,A,N,rIab,rSon,rows,sum,nach,j7:(EIN[L+1]-BK[L+1])*f,zA,zN,k,iabT,cap:iabT>Z};
+}
+function render(){
+  const c=calc();
+  $('oTicket').textContent=eur(c.T); $('oZve').textContent=eur(c.Z);
+  $('finfo').textContent='Darlehen '+eur(c.P)+' · Eigenmittel inkl. 1 % Strukturierungsgebühr '+eur(c.ekGes)+' · '+c.n+' Monatsraten ab Dezember 2026';
+  const mb=c.N.rate-c.A.rate, mnM=c.sum.mn/c.n, rueck=c.rIab+c.rSon;
+  $('hNm').textContent=sgn(mnM);
+  $('hTax').textContent=eur(rueck);
+  $('hKap').textContent=eur(c.sum.ein-c.sum.bk+c.nach);
+  $('kTax').textContent=eur(rueck);
+  $('kTaxS').textContent='IAB '+eur(c.iab)+(c.k>1?' (verteilt auf '+c.k+' Jahre, je '+eur(c.iabT)+')':'')+' bringt '+eur(c.rIab)+', Sonder-AfA '+eur(c.sonder)+' bringt '+eur(c.rSon);
+  const einM=(c.sum.ein-c.sum.bk)/(c.n+1);
+  $('kEin').textContent=eur(einM);
+  $('kEinS').textContent='nach Betriebskosten, im Schnitt. Rate neu: '+eur(c.N.rate)+', Differenz '+sgn(einM-c.N.rate)+' vor Steuer';
+  $('kNach').textContent=eur(c.nach);
+  $('kNachS').textContent='schuldenfreie Anlage, Jahr '+(c.L+1)+' bis 20, vor Steuer. Im Jahr '+(c.L+1)+': '+eur(c.j7)+' ('+eur(c.j7/12)+' pro Monat)';
+  $('cap').hidden=!c.cap;
+  $('cap').textContent='Der IAB-Anteil pro Jahr ('+eur(c.iabT)+') ist höher als das zu versteuernde Einkommen. Der Abzug wirkt in dieser Rechnung nur bis auf null; ein möglicher Verlustrücktrag ist nicht eingerechnet.';
+  $('say').textContent= c.sum.mn>0
+    ? 'Der höhere Zins kostet Sie netto rund '+eur(mnM)+' im Monat, über '+c.L+' Jahre zusammen '+eur(c.sum.mn)+'. Dem steht ein Steuerrückfluss von '+eur(rueck)+' gegenüber, also etwa das '+(rueck/c.sum.mn).toLocaleString('de-DE',{maximumFractionDigits:0})+'-Fache. Nach Kreditende gehört Ihnen eine schuldenfreie Anlage mit erwarteten Überschüssen von '+eur(c.nach)+'.'
+    : 'Beim neuen Zins entsteht keine Mehrbelastung gegenüber dem bisherigen Zins.';
+  const bars=[['Mehrzins netto, gesamte Laufzeit',Math.max(0,c.sum.mn),'var(--minus)'],['Steuerrückfluss IAB + Sonder-AfA',rueck,'var(--plus)'],['Überschüsse nach Kreditende',c.nach,'var(--brand)']];
+  const mx=Math.max(...bars.map(b=>b[1]),1);
+  $('bars').innerHTML=bars.map(b=>'<div class="bar"><span>'+b[0]+'</span><span class="track"><i style="width:'+(b[1]/mx*100).toFixed(1)+'%;background:'+b[2]+'"></i></span><b>'+eur(b[1])+'</b></div>').join('');
+  const liq=-c.ekGes+c.sum.ein-c.sum.bk-c.sum.rate-c.sum.tax;
+  const led=[['Eigenmittel inkl. Strukturierungsgebühr',-c.ekGes],['Einnahmen',c.sum.ein],['Betriebskosten',-c.sum.bk],['Kreditraten (Zins und Tilgung)',-c.sum.rate],['Steuern gesamt inkl. IAB und Sonder-AfA',-c.sum.tax]];
+  $('led').innerHTML=led.map(l=>'<div><span>'+l[0]+'</span><span class="'+(l[1]>=0?'pos':'neg')+'">'+sgn(l[1])+'</span></div>').join('')
+    +'<div class="sum"><span>Liquidität nach Steuern am Kreditende</span><span class="'+(liq>=0?'pos':'neg')+'">'+sgn(liq)+'</span></div>'
+    +'<div><span>danach: erwartete Überschüsse der schuldenfreien Anlage bis Jahr 20</span><span class="pos">'+sgn(c.nach)+'</span></div>';
+  const td=v=>'<td>'+eur(v)+'</td>';
+  $('tab').innerHTML='<thead><tr><th>Jahr</th><th>Einnahmen</th><th>Betriebskosten</th><th>Kreditraten neu</th><th>Mehrzins brutto</th><th>Mehrzins netto</th></tr></thead><tbody>'
+    +c.rows.map(r=>'<tr><td>'+(2026+r.y)+(r.y===0?' (Dez.)':'')+'</td>'+td(r.ein)+td(r.bk)+td(r.rate)+td(r.mb)+td(r.mn)+'</tr>').join('')
+    +'</tbody><tfoot><tr><td>Summe</td>'+td(c.sum.ein)+td(c.sum.bk)+td(c.sum.rate)+td(c.sum.mb)+td(c.sum.mn)+'</tr></tfoot>';
+}
+document.querySelectorAll('input,select').forEach(e=>e.addEventListener('input',render));
+render();
+</script>
+
+</body>
+</html>
